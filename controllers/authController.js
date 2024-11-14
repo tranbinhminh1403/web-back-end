@@ -99,7 +99,7 @@ const updateUserInfo = async (req, res) => {
 
     try {
         // Check if the user exists
-        const [user] = await db.query('SELECT * FROM users WHERE _id = ?', [userId]);
+        const [user] = await db.query('SELECT * FROM users WHERE user_id = ?', [userId]);
 
         if (user.length === 0) {
             return res.status(404).send({
@@ -110,13 +110,13 @@ const updateUserInfo = async (req, res) => {
 
         // Update email if provided
         if (email) {
-            await db.query('UPDATE users SET email = ?, updated_at = NOW() WHERE _id = ?', [email, userId]);
+            await db.query('UPDATE users SET email = ?, updated_at = NOW() WHERE user_id = ?', [email, userId]);
         }
 
         // Update password if provided
         if (newPassword) {
             const hashedPassword = await bcrypt.hash(newPassword, 10);
-            await db.query('UPDATE users SET password = ?, updated_at = NOW() WHERE _id = ?', [hashedPassword, userId]);
+            await db.query('UPDATE users SET password = ?, updated_at = NOW() WHERE user_id = ?', [hashedPassword, userId]);
         }
 
         res.status(200).send({
