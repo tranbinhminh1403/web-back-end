@@ -67,7 +67,7 @@ const loginUser = async (req, res) => {
         // Generate a JWT token
         const token = jwt.sign(
             {
-                id: existingUser._id,
+                id: existingUser.user_id,
                 username: existingUser.username,
                 role: existingUser.role,
             },
@@ -139,7 +139,7 @@ const getUser = async (req, res) => {
 
     try {
         // Retrieve the user info from the database
-        const [user] = await db.query('SELECT username, email FROM users WHERE _id = ?', [userId]);
+        const [user] = await db.query('SELECT username, email FROM users WHERE user_id = ?', [userId]);
 
         if (user.length === 0) {
             return res.status(404).send({
