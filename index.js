@@ -20,7 +20,7 @@ app.use(express.json());
 app.use(cors())
 
 //routes
-// app.use('/api/v1/products', require("./routes/productsRoutes"))
+app.use('/api/v1/products', require("./routes/productsRoute.js"))
 app.use('/api/v1/auth', require("./routes/authRoute.js"))
 
 // app.get("/test", (req, res) => {
