@@ -22,6 +22,7 @@ app.use(cors())
 //routes
 app.use('/api/v1/products', require("./routes/productsRoute.js"))
 app.use('/api/v1/auth', require("./routes/authRoute.js"))
+app.use('/api/v1/cart', require("./routes/cartRoute.js"));
 
 // app.get("/test", (req, res) => {
 //   res.status(200).send("<h1>hello world</h1>");
