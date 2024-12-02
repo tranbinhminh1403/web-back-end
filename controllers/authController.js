@@ -95,7 +95,7 @@ const loginUser = async (req, res) => {
 
 // Update user info
 const updateUserInfo = async (req, res) => {
-    const { userId, email, newPassword } = req.body;
+    const { userId, email, newPassword, address, phone } = req.body;
 
     try {
         // Check if the user exists
@@ -108,6 +108,14 @@ const updateUserInfo = async (req, res) => {
             });
         }
 
+        if (address) {
+            await db.query('UPDATE users SET address = ?, updated_at = NOW() WHERE user_id = ?', [address, userId]);
+        }
+
+        if (phone) {
+            await db.query('UPDATE users SET phone = ?, updated_at = NOW() WHERE user_id = ?', [phone, userId]);
+        }
+
         // Update email if provided
         if (email) {
             await db.query('UPDATE users SET email = ?, updated_at = NOW() WHERE user_id = ?', [email, userId]);
@@ -116,6 +124,7 @@ const updateUserInfo = async (req, res) => {
         // Update password if provided
         if (newPassword) {
             const hashedPassword = await bcrypt.hash(newPassword, 10);
+            console.log('Hashed Password:', hashedPassword);
             await db.query('UPDATE users SET password = ?, updated_at = NOW() WHERE user_id = ?', [hashedPassword, userId]);
         }
 
@@ -139,7 +148,7 @@ const getUser = async (req, res) => {
 
     try {
         // Retrieve the user info from the database
-        const [user] = await db.query('SELECT username, email FROM users WHERE user_id = ?', [userId]);
+        const [user] = await db.query('SELECT username, email, address, phone FROM users WHERE user_id = ?', [userId]);
 
         if (user.length === 0) {
             return res.status(404).send({

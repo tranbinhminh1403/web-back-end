@@ -110,5 +110,34 @@ const filterProducts = async (req, res) => {
     }
 };
 
-module.exports = { getAllProducts, getProductById, getProductsByCategory, filterProducts };
+const getPurchasedProducts = async (req, res) => {
+    const userId = req.params.userId; // Assuming you have a user ID to filter by
+    try {
+        const query = `
+            SELECT 
+                ci.cart_item_id, 
+                ci.product_id, 
+                p.product_name, 
+                p.price, 
+                ci.quantity, 
+                ci.purchase_date, 
+                c.category_name
+            FROM 
+                cart_items ci
+            JOIN 
+                products p ON ci.product_id = p.product_id
+            LEFT JOIN 
+                categories c ON p.category_id = c.category_id
+            WHERE 
+                ci.status = 1 AND ci.user_id = ?
+        `;
+        const [purchasedProducts] = await db.query(query, [userId]);
+        res.status(200).json({ success: true, data: purchasedProducts });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Failed to retrieve purchased products' });
+    }
+};
+
+module.exports = { getAllProducts, getProductById, getProductsByCategory, filterProducts, getPurchasedProducts };
 
