@@ -177,4 +177,68 @@ const logoutUser = (req, res) => {
     res.status(200).send({ success: true, message: 'Logout successful' });
 };
 
-module.exports = { registerUser, loginUser, logoutUser, updateUserInfo, getUser };
+const getAllUsers = async (req, res) => {
+    try {
+        console.log('User role:', req.user.role);
+        if (req.user.role !== 'admin') {
+            return res.status(403).send({
+                success: false,
+                message: 'Access denied. Admins only.',
+            });
+        }
+
+        const [users] = await db.query('SELECT user_id, username, email, role FROM users');
+        res.status(200).send({
+            success: true,
+            data: users,
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({
+            success: false,
+            message: 'Failed to retrieve users',
+            error,
+        });
+    }
+};
+
+const deleteUser = async (req, res) => {
+    try {
+        // Check if the user is an admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).send({
+                success: false,
+                message: 'Access denied. Admins only.',
+            });
+        }
+
+        const { userId } = req.params;
+
+        // Check if the user exists
+        const [user] = await db.query('SELECT * FROM users WHERE user_id = ?', [userId]);
+
+        if (user.length === 0) {
+            return res.status(404).send({
+                success: false,
+                message: 'User not found',
+            });
+        }
+
+        // Delete the user
+        await db.query('DELETE FROM users WHERE user_id = ?', [userId]);
+
+        res.status(200).send({
+            success: true,
+            message: 'User deleted successfully',
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({
+            success: false,
+            message: 'Failed to delete user',
+            error,
+        });
+    }
+};
+
+module.exports = { registerUser, loginUser, logoutUser, updateUserInfo, getUser, getAllUsers, deleteUser };

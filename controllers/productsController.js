@@ -139,5 +139,103 @@ const getPurchasedProducts = async (req, res) => {
     }
 };
 
-module.exports = { getAllProducts, getProductById, getProductsByCategory, filterProducts, getPurchasedProducts };
+const addProduct = async (req, res) => {
+    try {
+        // Check if the user is an admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Access denied. Admins only.' });
+        }
+
+        const { productName, price, stock, img, specs, discount, categoryId } = req.body;
+
+        const query = `
+            INSERT INTO products (product_name, price, stock, img, specs, discount, category_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        `;
+        await db.query(query, [productName, price, stock, img, specs, discount, categoryId]);
+
+        res.status(201).json({ success: true, message: 'Product added successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+const deleteProduct = async (req, res) => {
+    try {
+        // Check if the user is an admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Access denied. Admins only.' });
+        }
+
+        const { productId } = req.params;
+
+        const query = 'DELETE FROM products WHERE product_id = ?';
+        await db.query(query, [productId]);
+
+        res.status(200).json({ success: true, message: 'Product deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+const updateProduct = async (req, res) => {
+    try {
+        // Check if the user is an admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Access denied. Admins only.' });
+        }
+
+        const { productId } = req.params;
+        const { productName, price, stock, img, specs, discount, categoryId } = req.body;
+
+        // Build the query dynamically based on provided fields
+        let query = 'UPDATE products SET ';
+        const queryParams = [];
+        if (productName !== undefined) {
+            query += 'product_name = ?, ';
+            queryParams.push(productName);
+        }
+        if (price !== undefined) {
+            query += 'price = ?, ';
+            queryParams.push(price);
+        }
+        if (stock !== undefined) {
+            query += 'stock = ?, ';
+            queryParams.push(stock);
+        }
+        if (img !== undefined) {
+            query += 'img = ?, ';
+            queryParams.push(img);
+        }
+        if (specs !== undefined) {
+            query += 'specs = ?, ';
+            queryParams.push(specs);
+        }
+        if (discount !== undefined) {
+            query += 'discount = ?, ';
+            queryParams.push(discount);
+        }
+        if (categoryId !== undefined) {
+            query += 'category_id = ?, ';
+            queryParams.push(categoryId);
+        }
+
+        // Remove the trailing comma and space
+        query = query.slice(0, -2);
+
+        // Add the WHERE clause
+        query += ' WHERE product_id = ?';
+        queryParams.push(productId);
+
+        // Execute the query
+        await db.query(query, queryParams);
+
+        res.status(200).json({ success: true, message: 'Product updated successfully' });
+    } catch (error) {
+        console.error('Error updating product:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+module.exports = { getAllProducts, getProductById, getProductsByCategory, filterProducts, getPurchasedProducts, addProduct, updateProduct, deleteProduct };
 

@@ -127,4 +127,73 @@ const deleteCartItem = async (req, res) => {
     }
 };
 
-module.exports = { viewCart, viewPaidCart, addProductToCart, updateCartStatus, deleteCartItem };
+const getUserCartWithItems = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const query = `
+            SELECT 
+                c.cart_id, 
+                ci.cart_item_id, 
+                ci.quantity, 
+                ci.status, 
+                p.product_id, 
+                p.product_name, 
+                p.price, 
+                p.img
+            FROM 
+                carts c
+            LEFT JOIN 
+                cart_items ci ON c.cart_id = ci.cart_id
+            LEFT JOIN 
+                products p ON ci.product_id = p.product_id
+            WHERE 
+                c.user_id = ?
+        `;
+        const [cartWithItems] = await db.query(query, [userId]);
+
+        if (cartWithItems.length === 0) {
+            return res.status(404).json({ message: 'No cart found for this user' });
+        }
+
+        res.status(200).json({ success: true, data: cartWithItems });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+const getTotalPaidCartItems = async (req, res) => {
+    try {
+        // Check if the user is an admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Access denied. Admins only.' });
+        }
+
+        const query = `
+            SELECT 
+                p.product_id,
+                p.product_name,
+                SUM(ci.quantity) AS totalQuantitySold,
+                p.price,
+                p.discount,
+                c.category_name
+            FROM 
+                cart_items ci
+            JOIN 
+                products p ON ci.product_id = p.product_id
+            LEFT JOIN 
+                categories c ON p.category_id = c.category_id
+            WHERE 
+                ci.status = 1
+            GROUP BY 
+                p.product_id, p.product_name, p.price, p.discount, c.category_name
+        `;
+        const [result] = await db.query(query);
+
+        res.status(200).json({ success: true, data: result });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+module.exports = { viewCart, viewPaidCart, addProductToCart, updateCartStatus, deleteCartItem, getUserCartWithItems, getTotalPaidCartItems };
