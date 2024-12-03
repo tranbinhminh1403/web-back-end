@@ -22,6 +22,27 @@ const viewCart = async (req, res) => {
     }
 };
 
+const viewPaidCart = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const query = `
+            SELECT ci.cart_item_id, ci.quantity, ci.status, p.product_id, p.product_name,p.discount, p.price, p.img
+            FROM cart_items ci
+            JOIN products p ON ci.product_id = p.product_id
+            WHERE ci.cart_id = (SELECT cart_id FROM carts WHERE user_id = ?) AND ci.status = 1
+        `;
+        const [cartItems] = await db.query(query, [userId]);
+
+        if (cartItems.length === 0) {
+            return res.status(404).json({ message: 'Cart not found or all items are not paid' });
+        }
+
+        res.json({ success: true, data: cartItems });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
 // Add product to cart
 const addProductToCart = async (req, res) => {
     try {
@@ -60,7 +81,29 @@ const addProductToCart = async (req, res) => {
 const updateCartStatus = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { cartItemId, status } = req.body;
+
+        // Update all cart items for the user that are not yet paid (status != 1)
+        const query = `
+            UPDATE cart_items
+            SET status = 1
+            WHERE cart_id = (SELECT cart_id FROM carts WHERE user_id = ?) AND status != 1
+        `;
+        const [result] = await db.query(query, [userId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'No cart items found to update' });
+        }
+
+        res.json({ message: 'All cart items updated to paid status successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+const deleteCartItem = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { cartItemId } = req.params;
 
         // Check if the cart item belongs to the user
         const query = `
@@ -75,13 +118,13 @@ const updateCartStatus = async (req, res) => {
             return res.status(404).json({ message: 'Cart item not found or does not belong to the user' });
         }
 
-        // Update the status of the cart item
-        await db.query('UPDATE cart_items SET status = ? WHERE cart_item_id = ?', [status, cartItemId]);
+        // Delete the cart item
+        await db.query('DELETE FROM cart_items WHERE cart_item_id = ?', [cartItemId]);
 
-        res.json({ message: 'Cart item status updated successfully' });
+        res.json({ message: 'Cart item deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error });
     }
 };
 
-module.exports = { viewCart, addProductToCart, updateCartStatus };
+module.exports = { viewCart, viewPaidCart, addProductToCart, updateCartStatus, deleteCartItem };
