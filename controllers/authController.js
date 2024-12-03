@@ -179,7 +179,7 @@ const logoutUser = (req, res) => {
 
 const getAllUsers = async (req, res) => {
     try {
-        console.log('User role:', req.user.role);
+        // Check if the user is an admin
         if (req.user.role !== 'admin') {
             return res.status(403).send({
                 success: false,
@@ -187,10 +187,89 @@ const getAllUsers = async (req, res) => {
             });
         }
 
-        const [users] = await db.query('SELECT user_id, username, email, role FROM users');
+        const { username, email, address, phone } = req.query;
+
+        // Build the base query
+        let query = `
+            SELECT 
+                u.user_id, 
+                u.username, 
+                u.email, 
+                u.role,
+                u.address,
+                u.phone,
+                c.cart_id,
+                ci.cart_item_id,
+                ci.quantity,
+                ci.status,
+                p.product_id,
+                p.product_name,
+                p.price
+            FROM 
+                users u
+            LEFT JOIN 
+                carts c ON u.user_id = c.user_id
+            LEFT JOIN 
+                cart_items ci ON c.cart_id = ci.cart_id
+            LEFT JOIN 
+                products p ON ci.product_id = p.product_id
+            WHERE u.role = 'user'
+        `;
+
+        // Add filters based on query parameters
+        const queryParams = [];
+        if (username) {
+            query += ' AND u.username LIKE ?';
+            queryParams.push(`%${username}%`);
+        }
+        if (email) {
+            query += ' AND u.email LIKE ?';
+            queryParams.push(`%${email}%`);
+        }
+        if (address) {
+            query += ' AND u.address LIKE ?';
+            queryParams.push(`%${address}%`);
+        }
+        if (phone) {
+            query += ' AND u.phone LIKE ?';
+            queryParams.push(`%${phone}%`);
+        }
+
+        const [users] = await db.query(query, queryParams);
+
+        // Group cart items by user
+        const usersWithCarts = users.reduce((acc, user) => {
+            const { user_id, username, email, role, address, phone, cart_id, cart_item_id, quantity, status, product_id, product_name, price } = user;
+            if (!acc[user_id]) {
+                acc[user_id] = {
+                    user_id,
+                    username,
+                    email,
+                    role,
+                    address,
+                    phone,
+                    carts: []
+                };
+            }
+            if (cart_id) {
+                acc[user_id].carts.push({
+                    cart_id,
+                    cart_item_id,
+                    quantity,
+                    status,
+                    product: {
+                        product_id,
+                        product_name,
+                        price
+                    }
+                });
+            }
+            return acc;
+        }, {});
+
         res.status(200).send({
             success: true,
-            data: users,
+            data: Object.values(usersWithCarts),
         });
     } catch (error) {
         console.log(error);
@@ -224,12 +303,18 @@ const deleteUser = async (req, res) => {
             });
         }
 
+        // Delete cart items associated with the user's carts
+        await db.query('DELETE ci FROM cart_items ci JOIN carts c ON ci.cart_id = c.cart_id WHERE c.user_id = ?', [userId]);
+
+        // Delete carts associated with the user
+        await db.query('DELETE FROM carts WHERE user_id = ?', [userId]);
+
         // Delete the user
         await db.query('DELETE FROM users WHERE user_id = ?', [userId]);
 
         res.status(200).send({
             success: true,
-            message: 'User deleted successfully',
+            message: 'User and associated carts deleted successfully',
         });
     } catch (error) {
         console.log(error);
