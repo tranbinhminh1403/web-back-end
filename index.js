@@ -8,7 +8,6 @@ const dotenv = require('dotenv');
 //env config
 dotenv.config({ path: './.env' });
 
-
 //rest obj
 const app = express();
 
@@ -24,12 +23,11 @@ app.use('/api/v1/products', require("./routes/productsRoute.js"))
 app.use('/api/v1/auth', require("./routes/authRoute.js"))
 app.use('/api/v1/cart', require("./routes/cartRoute.js"));
 
-// app.get("/test", (req, res) => {
-//   res.status(200).send("<h1>hello world</h1>");
-// });
-
 //port
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT;
+const DB_HOST = process.env.DB_HOST;
+const DB_USER = process.env.DB_USER;
+const DB_PASSWORD = process.env.DB_PASSWORD;
 
 //conditionally listen
 mySqlPool
@@ -39,7 +37,7 @@ mySqlPool
     //listen
     app.listen(PORT, () => {
       console.log(
-        `server is running on port ${process.env.PORT}`.bgMagenta.white
+        `server is running on port ${PORT}`.bgMagenta.white
       );
     });
   })
